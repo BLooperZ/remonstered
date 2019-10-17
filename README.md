@@ -3,7 +3,8 @@
 Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [DOTT Remastered](http://dott.doublefine.com/).
 
 ## Download
-You can find a ready-to-use build (PyInstaller) in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
+You can find a ready-to-use build in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
+(Built with PyInstaller)
 
 ## Install
 1.  Extract the following files from `tenta.cle`:
@@ -12,7 +13,7 @@ You can find a ready-to-use build (PyInstaller) in the [Releases page](https://g
 
     Can be done using [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer)
 
-    ... You can use it to extract the classic game as well to play with ScummVM.
+    ... You can also use it to extract the classic game, to play it using ScummVM.
 
 2.  Put the extracted file in the same directory with the script.
 
@@ -32,9 +33,9 @@ You can find a ready-to-use build (PyInstaller) in the [Releases page](https://g
 
 * [DoubleFine Productions](http://www.doublefine.com) for [Day of the Tentacle Remastered](http://dott.doublefine.com/).
 
-* Quick and Easy Software for [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer) 
+* Quick and Easy Software for [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer).
 
-* PyInstaller Development Team for [PyInstaller](https://www.pyinstaller.org/)
+* PyInstaller Development Team for [PyInstaller](https://www.pyinstaller.org/).
 
 * LogicDeLuxe for [Monkey Island Ultimate Talkie Edition](http://www.gratissaugen.de/ultimatetalkies/).
 
