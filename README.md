@@ -32,6 +32,10 @@ You can find a ready-to-use build (PyInstaller) in the [Releases page](https://g
 
 * [DoubleFine Productions](http://www.doublefine.com) for [Day of the Tentacle Remastered](http://dott.doublefine.com/).
 
+* Quick and Easy Software for [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer) 
+
+* PyInstaller Development Team for [PyInstaller](https://www.pyinstaller.org/)
+
 * LogicDeLuxe for [Monkey Island Ultimate Talkie Edition](http://www.gratissaugen.de/ultimatetalkies/).
 
 * [elvisish at ScummVM Forums](https://forums.scummvm.org/viewtopic.php?f=8&t=14506) for this idea.
