@@ -1,0 +1,2 @@
+fsb5==1.0
+PyInstaller==3.5
