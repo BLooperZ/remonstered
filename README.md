@@ -23,7 +23,21 @@ You can find a ready-to-use build in the [Releases page](https://github.com/BLoo
 
 4.  Put `monster.so3` in same directory with the classic game.
 
-    Make sure there are no other `monster` files (`sou`, `sog` or `sof`) there.
+    Make sure there are no other `monster` files (`sof`, `sog`, `so3` or `sou`) there.
+
+### *NOTE*:
+It is also possible to convert sounds to `ogg` or `flac` format.
+
+This can be done by providing format argument to the script:
+
+`remonster.exe ogg` -> `ogg` format, creates `monster.sog`.
+(much smaller file than `mp3`)
+
+`remonster.exe flac` -> `flac` format, creates `monster.sof`. (no reason to use `flac` here as source files are already compressed with lossy compression).
+
+This feature requires [ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) to be installed or to be put in script directory.
+
+When using convertion output may vary depending on ffmpeg version.
 
 ## Thanks
 
