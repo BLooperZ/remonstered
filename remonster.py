@@ -12,7 +12,8 @@ import fsb5
 from convert import format_streams
 
 def print_progress(total, iterable, size=50):
-    print(f'\r0 of {total}', end='\r')
+    init = '-' * (size - 1)
+    print(f'\r|>{init}| Completed: {0:0.2f}%', end='\r')
     for idx, _ in enumerate(iterable):
         if total:
             prefix = '=' * ((idx * size) // total)
