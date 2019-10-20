@@ -1,27 +1,33 @@
-# DOTT reMONSTERed
+# FT reMONSTERed (WiP)
 
-Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [DOTT Remastered](http://dott.doublefine.com/).
+Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [FT Remastered](http://fullthrottle.doublefine.com/).
+
+*NOTE*: This project is still Work-in-Progress.
+Currently, only speech is supported and might change in future.
 
 ## Download
-You can find a ready-to-use build in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
+Ready-to-use build not available yet.
+
+In the meantime, check out other projects in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
 (Built with PyInstaller)
 
 ## Install
-1.  Extract the following files from `tenta.cle`:
-    * `iMUSEClient_SFX.fsb`
-    * `iMUSEClient_VO.fsb` 
+1.  Put [ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) in script directory if not already installed.
+
+2.  Extract the following files from `full.data`:
+    * `iMUSEClient_SPEECH.fsb`
 
     Can be done using [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer)
 
     ... You can also use it to extract the classic game, to play it using ScummVM.
 
-2.  Put the extracted file in the same directory with the script.
+3.  Put the extracted file in the same directory with the script.
 
-3.  Launch the script (or double click `remonster.exe`)
+4.  Launch the script (or double click `remonster.exe`)
 
     This will create a file called `monster.so3` in same directory.
 
-4.  Put `monster.so3` in same directory with the classic game.
+5.  Put `monster.so3` in same directory with the classic game.
 
     Make sure there are no other `monster` files (`sof`, `sog`, `so3` or `sou`) there.
 
@@ -39,17 +45,15 @@ It will take longer time to complete, then you can continue to the next step.
 
 Notice the different output file name (as described above).
 
-This feature requires [ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) to be installed or to be put in script directory.
-
 When using convertion output may vary depending on ffmpeg version.
 
 ## Thanks
 
 * ScummVM Team for [ScummVM](https://www.scummvm.org/) and [ScummVM Tools](https://github.com/scummvm/scummvm-tools).
 
-* LucasArts for the original [Day of the Tentacle](https://en.wikipedia.org/wiki/Day_of_the_Tentacle).
+* LucasArts for the original [Full Throttle](https://en.wikipedia.org/wiki/Full_Throttle_(1995_video_game)).
 
-* [DoubleFine Productions](http://www.doublefine.com) for [Day of the Tentacle Remastered](http://dott.doublefine.com/).
+* [DoubleFine Productions](http://www.doublefine.com) for [Full Throttle Remastered](http://fullthrottle.doublefine.com/).
 
 * Quick and Easy Software for [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer).
 

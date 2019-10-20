@@ -1,3 +1,3 @@
 pyinstaller --onefile remonster.py
-copy dott\*.tbl dist
+copy ft\*.tbl dist
 copy README.md dist

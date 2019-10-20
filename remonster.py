@@ -10,9 +10,11 @@ import functools
 import fsb5
 
 from convert import format_streams
+from missing import build_missing_entry
 
 def print_progress(total, iterable, size=50):
-    print(f'\r0 of {total}', end='\r')
+    init = '-' * (size - 1)
+    print(f'\r|>{init}| Completed: {0:0.2f}%', end='\r')
     for idx, _ in enumerate(iterable):
         if total:
             prefix = '=' * ((idx * size) // total)
@@ -72,9 +74,11 @@ def copy_stream_buffered(in_stream, out_stream):
         out_stream.write(buffer)
         yield len(buffer)
 
-def read_streams(sfx, speech, index):
+def read_streams(speech, index):
     for offset, tags, fname in index:
-        stream = sfx[fname] if fname in sfx else speech[f'EN_{fname}']
+        stream = speech.get(f'EN_HQ_{fname}', None)
+        if not stream:
+            stream = build_missing_entry(speech, fname)
         yield offset, tags, stream
 
 if __name__ == '__main__':
@@ -87,15 +91,11 @@ if __name__ == '__main__':
                 open('tags.tbl', 'r') as tags_table:
             index = list(read_index(monster_table, tags_table))
 
-        with open('iMUSEClient_SFX.fsb', 'rb') as f:
-            fsb = fsb5.FSB5(f.read())
-            sfx = {sample.name: sample.data for sample in fsb.samples}
-            ext = fsb.get_sample_extension()
-
-        with open('iMUSEClient_VO.fsb', 'rb') as f:
+        with open('iMUSEClient_SPEECH.fsb', 'rb') as f:
             fsb = fsb5.FSB5(f.read())
             speech = {sample.name: sample.data for sample in fsb.samples}
-            assert fsb.get_sample_extension() == ext
+            ext = fsb.get_sample_extension()
+
     except OSError as e:
         print(f'ERROR: Failed to load file: {e.filename}.')
         print('Please make sure this file is available in current working directory.')
@@ -111,6 +111,6 @@ if __name__ == '__main__':
             sys.exit(1)
 
     output_ext = output_exts[target_ext]
-    streams = format_streams(read_streams(sfx, speech, index), ext, target_ext)
+    streams = format_streams(read_streams(speech, index), ext, target_ext)
     build = build_monster(streams, f'monster.{output_ext}', progress=functools.partial(print_progress, len(index)))
     print('Done!')
