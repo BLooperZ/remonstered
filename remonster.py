@@ -76,7 +76,7 @@ def copy_stream_buffered(in_stream, out_stream):
 
 def read_streams(speech, index):
     for offset, tags, fname in index:
-        stream = speech.get(f'EN_HQ_{fname}', None)
+        stream = speech.get(fname, None)
         if not stream:
             stream = build_missing_entry(speech, fname)
         yield offset, tags, stream
@@ -92,8 +92,10 @@ if __name__ == '__main__':
             index = list(read_index(monster_table, tags_table))
 
         with open('iMUSEClient_SPEECH.fsb', 'rb') as f:
+            prefix = 'EN_HQ_'
+
             fsb = fsb5.FSB5(f.read())
-            speech = {sample.name: sample.data for sample in fsb.samples}
+            speech = {sample.name[len(prefix):]: sample.data for sample in fsb.samples if sample.name.startswith(prefix)}
             ext = fsb.get_sample_extension()
 
     except OSError as e:

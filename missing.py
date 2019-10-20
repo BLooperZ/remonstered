@@ -37,7 +37,7 @@ def cut_stream(source, start, end, container):
     return cut_audio_without_re_encoding(container[source], start, end)
 
 missing = {
-    'ben_OFFICE-LINE2019': partial(cut_stream, 'EN_HQ_ben_BIG-DOOR-LINE2015', '00:00:00.02', '00:00:01.20')
+    'ben_OFFICE-LINE2019': partial(cut_stream, 'ben_BIG-DOOR-LINE2015', '00:00:00.02', '00:00:01.20')
 }
 
 def build_missing_entry(container, fname):
