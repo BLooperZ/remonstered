@@ -105,3 +105,6 @@ venv.bak/
 
 # Editor config
 .vscode/
+
+# Output
+*.so*

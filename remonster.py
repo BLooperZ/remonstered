@@ -6,6 +6,7 @@ import tempfile
 import struct
 import itertools
 import functools
+from collections import ChainMap
 
 import fsb5
 from tqdm import tqdm
@@ -68,10 +69,9 @@ def read_index(monster_table, tags_table):
         offset, fname = sound[:8], sound[8:]
         yield binascii.unhexlify(offset.encode()), binascii.unhexlify(tags.encode()), fname
 
-def read_streams(sfx, speech, index):
+def read_streams(sounds, index):
     for offset, tags, fname in index:
-        stream = sfx[fname] if fname in sfx else speech[f'EN_{fname}']
-        yield offset, tags, stream
+        yield offset, tags, sounds[fname]
 
 if __name__ == '__main__':
     import multiprocessing as mp
@@ -86,30 +86,32 @@ if __name__ == '__main__':
             index = list(read_index(monster_table, tags_table))
 
         with lpak.open(res_file) as pak:
-            with pak.open('audio/iMUSEClient_SFX.fsb', 'rb') as f:
-                fsb = fsb5.FSB5(f)
-                sfx = {sample.name: sample.data for sample in fsb.samples}
-                ext = fsb.get_sample_extension()
+            with pak.open('audio/iMUSEClient_SFX.fsb', 'rb') as fsfx, \
+                    pak.open('audio/iMUSEClient_VO.fsb', 'rb') as fvo:
 
-            with pak.open('audio/iMUSEClient_VO.fsb', 'rb') as f:
-                fsb = fsb5.FSB5(f)
-                speech = {sample.name: sample.data for sample in fsb.samples}
-                assert fsb.get_sample_extension() == ext
+                sfx = fsb5.FSB5(fsfx)
+                ext = sfx.get_sample_extension()
+
+                speech = fsb5.FSB5(fvo, prefix='EN_')
+                assert speech.get_sample_extension() == ext
+
+                sounds = ChainMap(sfx, speech)
+
+                target_ext = ext
+                if len(sys.argv) > 1:
+                    target_ext = sys.argv[1]
+                    if target_ext not in output_exts:
+                        available = '|'.join(output_exts)
+                        print(f'ERROR: Unsupported audio format: {target_ext}.')
+                        print(f'Available options are <{available}>.')
+                        sys.exit(1)
+
+                output_ext = output_exts[target_ext]
+                streams = format_streams(read_streams(sounds, index), ext, target_ext)
+                build = build_monster(streams, f'monster.{output_ext}', len(index))
+                print('Done!')
+
     except OSError as e:
         print(f'ERROR: Failed to load file: {e.filename}.')
         print('Please make sure this file is available in current working directory.')
         sys.exit(1)
-
-    target_ext = ext
-    if len(sys.argv) > 1:
-        target_ext = sys.argv[1]
-        if target_ext not in output_exts:
-            available = '|'.join(output_exts)
-            print(f'ERROR: Unsupported audio format: {target_ext}.')
-            print(f'Available options are <{available}>.')
-            sys.exit(1)
-
-    output_ext = output_exts[target_ext]
-    streams = format_streams(read_streams(sfx, speech, index), ext, target_ext)
-    build = build_monster(streams, f'monster.{output_ext}', len(index))
-    print('Done!')
