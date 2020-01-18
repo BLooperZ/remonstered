@@ -6,14 +6,13 @@ import tempfile
 import struct
 import itertools
 import functools
-from collections import ChainMap
 
-import fsb5
 from tqdm import tqdm
 
 import lpak
 from convert import format_streams
 from utils import copy_stream_buffered
+from soundbank import get_soundbanks_view
 
 output_exts = {
     'ogg': 'sog',
@@ -80,23 +79,19 @@ if __name__ == '__main__':
 
     # TODO: accept file path as first parameter with current directory as default
     res_file = './tenta.cle'
+
     try:
         with open('dott/monster.tbl', 'r') as monster_table, \
                 open('dott/tags.tbl', 'r') as tags_table:
             index = list(read_index(monster_table, tags_table))
 
         with lpak.open(res_file) as pak:
-            with pak.open('audio/iMUSEClient_SFX.fsb', 'rb') as fsfx, \
-                    pak.open('audio/iMUSEClient_VO.fsb', 'rb') as fvo:
+            audiomap = {
+                'audio/iMUSEClient_SFX.fsb': '',
+                'audio/iMUSEClient_VO.fsb': 'EN_'
+            }
 
-                sfx = fsb5.FSB5(fsfx)
-                ext = sfx.get_sample_extension()
-
-                speech = fsb5.FSB5(fvo, prefix='EN_')
-                assert speech.get_sample_extension() == ext
-
-                sounds = ChainMap(sfx, speech)
-
+            with get_soundbanks_view(pak, audiomap) as (ext, sounds):
                 target_ext = ext
                 if len(sys.argv) > 1:
                     target_ext = sys.argv[1]
