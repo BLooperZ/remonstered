@@ -8,25 +8,23 @@ import itertools
 import functools
 
 import fsb5
+from tqdm import tqdm
 
+import lpak
 from convert import format_streams
-
-def print_progress(total, iterable, size=50):
-    init = '-' * (size - 1)
-    print(f'\r|>{init}| Completed: {0:0.2f}%', end='\r')
-    for idx, _ in enumerate(iterable):
-        if total:
-            prefix = '=' * ((idx * size) // total)
-            suffix = '-' * (((total - idx - 1) * size) // total)
-            completed = (idx + 1) / total
-            print(f'\r|{prefix}>{suffix}| Completed: {100 * completed:0.2f}%', end='\r')
-    print()
+from utils import copy_stream_buffered
 
 output_exts = {
     'ogg': 'sog',
     'flac': 'sof',
     'mp3': 'so3'
 }
+
+print_progress = functools.partial(
+    tqdm,
+    ascii=f'->>=',
+    bar_format='[{bar:50}] Completed: {percentage:0.2f}%'
+)
 
 def collect_streams(output_idx, audio_stream, streams):
     for offset, tags, stream in streams:
@@ -40,38 +38,35 @@ def collect_streams(output_idx, audio_stream, streams):
 
         yield offset, tags, stream
 
-def build_monster(streams, output_file, progress):
+def build_monster(streams, output_file, index_size):
     with io.BytesIO() as output_idx, \
             tempfile.TemporaryFile() as audio_stream:
 
         print('Collecting audio streams...')
-        progress(collect_streams(output_idx, audio_stream, streams))
+        with print_progress(total=index_size) as pbar:
+            for _ in collect_streams(output_idx, audio_stream, streams):
+                pbar.update(1)
 
         print('Writing output file...')
-        total = calculate_stream_size(output_idx.tell(), audio_stream.tell())
-        progress = functools.partial(print_progress, total)
+        total_size = output_idx.tell() + audio_stream.tell()
         with open(output_file, 'wb') as output:
             output.write(struct.pack('>I', output_idx.tell()))
             output_idx.seek(0, io.SEEK_SET)
             audio_stream.seek(0, io.SEEK_SET)
-            progress(itertools.chain(
+
+            writes = itertools.chain(
                 copy_stream_buffered(output_idx, output),
                 copy_stream_buffered(audio_stream, output)
-            ))
+            )
+            with print_progress(total=total_size) as pbar:
+                for dp in writes:
+                    pbar.update(dp)
 
 def read_index(monster_table, tags_table):
     for sound, tags in zip(monster_table, tags_table):
         sound, tags = sound[:-1], tags[:-1]
         offset, fname = sound[:8], sound[8:]
         yield binascii.unhexlify(offset.encode()), binascii.unhexlify(tags.encode()), fname
-
-def calculate_stream_size(*sizes):
-    return sum(((size + io.DEFAULT_BUFFER_SIZE - 1) // io.DEFAULT_BUFFER_SIZE) for size in sizes)
-
-def copy_stream_buffered(in_stream, out_stream):
-    for buffer in iter(functools.partial(in_stream.read, io.DEFAULT_BUFFER_SIZE), b''):
-        out_stream.write(buffer)
-        yield len(buffer)
 
 def read_streams(sfx, speech, index):
     for offset, tags, fname in index:
@@ -83,20 +78,23 @@ if __name__ == '__main__':
 
     mp.freeze_support()
 
+    # TODO: accept file path as first parameter with current directory as default
+    res_file = './tenta.cle'
     try:
-        with open('monster.tbl', 'r') as monster_table, \
-                open('tags.tbl', 'r') as tags_table:
+        with open('dott/monster.tbl', 'r') as monster_table, \
+                open('dott/tags.tbl', 'r') as tags_table:
             index = list(read_index(monster_table, tags_table))
 
-        with open('iMUSEClient_SFX.fsb', 'rb') as f:
-            fsb = fsb5.FSB5(f.read())
-            sfx = {sample.name: sample.data for sample in fsb.samples}
-            ext = fsb.get_sample_extension()
+        with lpak.open(res_file) as pak:
+            with pak.open('audio/iMUSEClient_SFX.fsb', 'rb') as f:
+                fsb = fsb5.FSB5(f)
+                sfx = {sample.name: sample.data for sample in fsb.samples}
+                ext = fsb.get_sample_extension()
 
-        with open('iMUSEClient_VO.fsb', 'rb') as f:
-            fsb = fsb5.FSB5(f.read())
-            speech = {sample.name: sample.data for sample in fsb.samples}
-            assert fsb.get_sample_extension() == ext
+            with pak.open('audio/iMUSEClient_VO.fsb', 'rb') as f:
+                fsb = fsb5.FSB5(f)
+                speech = {sample.name: sample.data for sample in fsb.samples}
+                assert fsb.get_sample_extension() == ext
     except OSError as e:
         print(f'ERROR: Failed to load file: {e.filename}.')
         print('Please make sure this file is available in current working directory.')
@@ -113,5 +111,5 @@ if __name__ == '__main__':
 
     output_ext = output_exts[target_ext]
     streams = format_streams(read_streams(sfx, speech, index), ext, target_ext)
-    build = build_monster(streams, f'monster.{output_ext}', progress=functools.partial(print_progress, len(index)))
+    build = build_monster(streams, f'monster.{output_ext}', len(index))
     print('Done!')
