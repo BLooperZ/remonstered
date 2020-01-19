@@ -3,6 +3,7 @@ import sys
 import io
 import binascii
 import tempfile
+import os
 import struct
 import itertools
 import functools
@@ -62,15 +63,25 @@ def build_monster(streams, output_file, index_size):
                 for dp in writes:
                     pbar.update(dp)
 
+def read_hex(hexstr):
+    return binascii.unhexlify(hexstr.encode())
+
 def read_index(monster_table, tags_table):
     for sound, tags in zip(monster_table, tags_table):
         sound, tags = sound[:-1], tags[:-1]
         offset, fname = sound[:8], sound[8:]
-        yield binascii.unhexlify(offset.encode()), binascii.unhexlify(tags.encode()), fname
+        yield read_hex(offset), read_hex(tags), fname
 
 def read_streams(sounds, index):
     for offset, tags, fname in index:
         yield offset, tags, sounds[fname]
+
+def read_tables(path):
+    filemap = os.path.join(path, 'monster.tbl')
+    tagmap = os.path.join(path, 'tags.tbl')
+    with open(filemap, 'r') as monster_table, \
+            open(tagmap, 'r') as tags_table:
+        return list(read_index(monster_table, tags_table))
 
 if __name__ == '__main__':
     import multiprocessing as mp
@@ -81,16 +92,13 @@ if __name__ == '__main__':
     res_file = './tenta.cle'
 
     try:
-        with open('dott/monster.tbl', 'r') as monster_table, \
-                open('dott/tags.tbl', 'r') as tags_table:
-            index = list(read_index(monster_table, tags_table))
+        index = read_tables('dott')
+        audiomap = {
+            'audio/iMUSEClient_SFX.fsb': '',
+            'audio/iMUSEClient_VO.fsb': 'EN_'
+        }
 
         with lpak.open(res_file) as pak:
-            audiomap = {
-                'audio/iMUSEClient_SFX.fsb': '',
-                'audio/iMUSEClient_VO.fsb': 'EN_'
-            }
-
             with get_soundbanks_view(pak, audiomap) as (ext, sounds):
                 target_ext = ext
                 if len(sys.argv) > 1:
