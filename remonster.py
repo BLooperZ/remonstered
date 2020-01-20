@@ -76,7 +76,7 @@ def read_index(monster_table, tags_table):
 
 def read_streams(sounds, index):
     for offset, tags, fname in index:
-        stream = speech.get(fname, None)
+        stream = sounds.get(fname, None)
         if not stream:
             stream = build_missing_entry(sounds, fname)
         yield offset, tags, stream
