@@ -29,6 +29,11 @@ print_progress = functools.partial(
     bar_format='[{bar:50}] Completed: {percentage:0.2f}%'
 )
 
+def drive_progress(it, *args, **kwargs):
+    with print_progress(it, *args, **kwargs) as pbar:
+        for dp in it:
+            pbar.update(dp)
+
 def collect_streams(output_idx, audio_stream, streams):
     for offset, tags, stream in streams:
         output_idx.write(offset)
@@ -46,9 +51,8 @@ def build_monster(streams, output_file, index_size):
             tempfile.TemporaryFile() as audio_stream:
 
         print('Collecting audio streams...')
-        with print_progress(total=index_size) as pbar:
-            for _ in collect_streams(output_idx, audio_stream, streams):
-                pbar.update(1)
+        streaming = (1 for _ in collect_streams(output_idx, audio_stream, streams))
+        drive_progress(streaming, total=index_size)
 
         print('Writing output file...')
         total_size = output_idx.tell() + audio_stream.tell()
@@ -61,9 +65,8 @@ def build_monster(streams, output_file, index_size):
                 copy_stream_buffered(output_idx, output),
                 copy_stream_buffered(audio_stream, output)
             )
-            with print_progress(total=total_size) as pbar:
-                for dp in writes:
-                    pbar.update(dp)
+
+            drive_progress(writes, total=total_size)
 
 def read_hex(hexstr):
     return binascii.unhexlify(hexstr.encode())
