@@ -15,6 +15,7 @@ import lpak
 from convert import format_streams
 from utils import copy_stream_buffered
 from soundbank import get_soundbanks_view
+from missing import build_missing_entry
 
 output_exts = {
     'ogg': 'sog',
@@ -75,7 +76,10 @@ def read_index(monster_table, tags_table):
 
 def read_streams(sounds, index):
     for offset, tags, fname in index:
-        yield offset, tags, sounds[fname]
+        stream = speech.get(fname, None)
+        if not stream:
+            stream = build_missing_entry(sounds, fname)
+        yield offset, tags, stream
 
 def read_tables(path):
     filemap = os.path.join(path, 'monster.tbl')
@@ -98,8 +102,7 @@ if __name__ == '__main__':
     res_file = './tenta.cle'
 
     try:
-        index = read_tables('dott')
-        audiomap = read_audiomap('dott')
+        index, audiomap = read_tables('.'), read_audiomap('.')
 
         with lpak.open(res_file) as pak:
             with get_soundbanks_view(pak, audiomap) as (ext, sounds):
