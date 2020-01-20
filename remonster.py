@@ -4,6 +4,7 @@ import io
 import binascii
 import tempfile
 import os
+import json
 import struct
 import itertools
 import functools
@@ -83,6 +84,11 @@ def read_tables(path):
             open(tagmap, 'r') as tags_table:
         return list(read_index(monster_table, tags_table))
 
+def read_audiomap(path):
+    mapfile = os.path.join(path, 'stream.json')
+    with open(mapfile, 'r') as audiomap:
+        return json.load(audiomap)
+
 if __name__ == '__main__':
     import multiprocessing as mp
 
@@ -93,10 +99,7 @@ if __name__ == '__main__':
 
     try:
         index = read_tables('dott')
-        audiomap = {
-            'audio/iMUSEClient_SFX.fsb': '',
-            'audio/iMUSEClient_VO.fsb': 'EN_'
-        }
+        audiomap = read_audiomap('dott')
 
         with lpak.open(res_file) as pak:
             with get_soundbanks_view(pak, audiomap) as (ext, sounds):
