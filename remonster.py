@@ -9,11 +9,9 @@ import struct
 import itertools
 import functools
 
-from tqdm import tqdm
-
 import lpak
 from convert import format_streams
-from utils import copy_stream_buffered
+from utils import copy_stream_buffered, drive_progress
 from soundbank import get_soundbanks_view
 from missing import build_missing_entry
 
@@ -22,17 +20,6 @@ output_exts = {
     'flac': 'sof',
     'mp3': 'so3'
 }
-
-print_progress = functools.partial(
-    tqdm,
-    ascii=f'->>=',
-    bar_format='[{bar:50}] Completed: {percentage:0.2f}%'
-)
-
-def drive_progress(it, *args, **kwargs):
-    with print_progress(it, *args, **kwargs) as pbar:
-        for dp in it:
-            pbar.update(dp)
 
 def collect_streams(output_idx, audio_stream, streams):
     for offset, tags, stream in streams:
