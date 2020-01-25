@@ -1,25 +1,15 @@
 #!/usr/bin/env python
-import sys
 import io
-import binascii
 import tempfile
-import os
-import json
 import struct
 import itertools
-import functools
 
-import lpak
+import click
+
+from audio import get_output_extension, output_exts
 from convert import format_streams
-from utils import copy_stream_buffered, drive_progress
-from soundbank import get_soundbanks_view
-from missing import build_missing_entry
-
-output_exts = {
-    'ogg': 'sog',
-    'flac': 'sof',
-    'mp3': 'so3'
-}
+from utils import copy_stream_buffered, drive_progress, consume, iterate
+from resource import fetch_sources
 
 def collect_streams(output_idx, audio_stream, streams):
     for offset, tags, stream in streams:
@@ -33,84 +23,66 @@ def collect_streams(output_idx, audio_stream, streams):
 
         yield offset, tags, stream
 
+def finalize_output(output, index, stream):
+    output.write(struct.pack('>I', index.tell()))
+    index.seek(0, io.SEEK_SET)
+    stream.seek(0, io.SEEK_SET)
+
+    return itertools.chain(
+        copy_stream_buffered(index, output),
+        copy_stream_buffered(stream, output)
+    )
+
 def build_monster(streams, output_file, index_size):
     with io.BytesIO() as output_idx, \
             tempfile.TemporaryFile() as audio_stream:
 
-        print('Collecting audio streams...')
-        streaming = (1 for _ in collect_streams(output_idx, audio_stream, streams))
-        drive_progress(streaming, total=index_size)
+        action = 'Collecting audio streams...'
+        streaming = iterate(collect_streams(output_idx, audio_stream, streams))
+        yield action, (streaming, index_size)
+        consume(streaming)
 
-        print('Writing output file...')
+        action = 'Writing output file...'
         total_size = output_idx.tell() + audio_stream.tell()
         with open(output_file, 'wb') as output:
-            output.write(struct.pack('>I', output_idx.tell()))
-            output_idx.seek(0, io.SEEK_SET)
-            audio_stream.seek(0, io.SEEK_SET)
+            writes = finalize_output(output, output_idx, audio_stream)
+            yield action, (writes, total_size)
+            consume(writes)
 
-            writes = itertools.chain(
-                copy_stream_buffered(output_idx, output),
-                copy_stream_buffered(audio_stream, output)
-            )
+def remonster(res_file, index_dir='.', target_ext=None):
+    with fetch_sources(res_file, index_dir) as source:
+        ext, index, source_streams = source
+        target_ext = target_ext or ext
+        output_ext = get_output_extension(target_ext)
+        streams = format_streams(source_streams, ext, target_ext)
+        yield from build_monster(streams, f'monster.{output_ext}', len(index))
 
-            drive_progress(writes, total=total_size)
-
-def read_hex(hexstr):
-    return binascii.unhexlify(hexstr.encode())
-
-def read_index(monster_table, tags_table):
-    for sound, tags in zip(monster_table, tags_table):
-        sound, tags = sound[:-1], tags[:-1]
-        offset, fname = sound[:8], sound[8:]
-        yield read_hex(offset), read_hex(tags), fname
-
-def read_streams(sounds, index):
-    for offset, tags, fname in index:
-        stream = sounds.get(fname, None)
-        if not stream:
-            stream = build_missing_entry(sounds, fname)
-        yield offset, tags, stream
-
-def read_tables(path):
-    filemap = os.path.join(path, 'monster.tbl')
-    tagmap = os.path.join(path, 'tags.tbl')
-    with open(filemap, 'r') as monster_table, \
-            open(tagmap, 'r') as tags_table:
-        return list(read_index(monster_table, tags_table))
-
-def read_audiomap(path):
-    mapfile = os.path.join(path, 'stream.json')
-    with open(mapfile, 'r') as audiomap:
-        return json.load(audiomap)
+@click.command()
+@click.argument(
+    'filename',
+    metavar='<filename>',
+    required=False, default='./tenta.cle'
+)
+@click.option(
+    '--format', '-f', 'audio_format',
+    type=str, metavar=f"[{'|'.join(output_exts)}]",
+    default=None, help='Output audio format'
+)
+@click.option(
+    '--index', '-i', 'index_dir',
+    type=click.Path(), metavar='<path>',
+    default=None, help='Path to directory with .tbl files'
+)
+@click.help_option('-h', '--help')
+def main(filename, index_dir, audio_format):
+    prog = remonster(filename, index_dir, audio_format)
+    for action, (task, total) in prog:
+        print(action)
+        drive_progress(task, total=total)
+    print('Done!')
 
 if __name__ == '__main__':
     import multiprocessing as mp
-
     mp.freeze_support()
 
-    # TODO: accept file path as first parameter with current directory as default
-    res_file = './tenta.cle'
-
-    try:
-        index, audiomap = read_tables('.'), read_audiomap('.')
-
-        with lpak.open(res_file) as pak:
-            with get_soundbanks_view(pak, audiomap) as (ext, sounds):
-                target_ext = ext
-                if len(sys.argv) > 1:
-                    target_ext = sys.argv[1]
-                    if target_ext not in output_exts:
-                        available = '|'.join(output_exts)
-                        print(f'ERROR: Unsupported audio format: {target_ext}.')
-                        print(f'Available options are <{available}>.')
-                        sys.exit(1)
-
-                output_ext = output_exts[target_ext]
-                streams = format_streams(read_streams(sounds, index), ext, target_ext)
-                build = build_monster(streams, f'monster.{output_ext}', len(index))
-                print('Done!')
-
-    except OSError as e:
-        print(f'ERROR: Failed to load file: {e.filename}.')
-        print('Please make sure this file is available in current working directory.')
-        sys.exit(1)
+    main()

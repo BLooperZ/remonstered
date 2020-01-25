@@ -27,7 +27,7 @@ def cut_audio_without_re_encoding(source, start, end):
                 stderr=subprocess.PIPE
             )
             with open(dst, 'rb') as f:
-                return f.read()
+                yield f
         except OSError:
             print('ERROR: ffmpeg not available.')
             print('Please make sure ffmpeg binaries can be found in PATH.')

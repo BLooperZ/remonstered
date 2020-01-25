@@ -14,7 +14,14 @@ def drive_progress(it, *args, **kwargs):
         for dp in it:
             pbar.update(dp)
 
+def consume(it, *args, **kwargs):
+    for _ in it:
+        pass
+
 def copy_stream_buffered(in_stream, out_stream):
     for buffer in iter(functools.partial(in_stream.read, io.DEFAULT_BUFFER_SIZE), b''):
         out_stream.write(buffer)
         yield len(buffer)
+
+def iterate(it):
+    return (1 for _ in it)

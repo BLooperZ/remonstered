@@ -4,6 +4,8 @@ import warnings
 import concurrent.futures
 from functools import partial
 
+import click
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     import pydub
@@ -30,14 +32,17 @@ def convert_streams(streams, src_ext, target_ext):
             executor.shutdown(wait=False)
             raise kbi
 
+class LibraryFFMPEGNotAvailableError(click.ClickException):
+    def show(self):
+        print('ERROR: ffmpeg not available.')
+        print('To convert audio, please make sure ffmpeg binaries can be found in PATH.')
+
 def test_converter(target_ext):
     try:
         with io.BytesIO() as stream:
             pydub.AudioSegment.empty().export(stream, format=target_ext)
     except OSError:
-        print('ERROR: ffmpeg not available.')
-        print('To convert audio, please make sure ffmpeg binaries can be found in PATH.')
-        sys.exit(1)
+        raise LibraryFFMPEGNotAvailableError('ffmpeg')
 
 def format_streams(streams, src_ext, target_ext):
     if src_ext == target_ext:
