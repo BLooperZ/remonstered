@@ -7,9 +7,12 @@ from itertools import takewhile
 from functools import partial
 from contextlib import contextmanager
 from typing import NamedTuple
+from pathlib import Path
 
 from streamview import PartialStreamView
 from utils import copy_stream_buffered
+
+GLOB_ALL = '*'
 
 class LPAKFileEntry(NamedTuple):
     data_offset: int
@@ -94,6 +97,9 @@ class LPakArchive:
     def __exit__(self, type, value, traceback):
         return self._stream.close()
 
+    def iglob(self, pattern):
+        return (fname for fname in self.index if Path(fname).match(pattern))
+
     def listdir(self, path=''):
         path = os.path.join(os.path.normpath(path), '')
         if path == './':
@@ -105,13 +111,14 @@ class LPakArchive:
             self._data.seek(member.data_offset)
             yield fname, PartialStreamView(self._data, member.decompressed_size)
 
-    def extractall(self, dirname):
+    def extractall(self, dirname, pattern=GLOB_ALL):
         for fname, filestream in self:
-            sdir = os.path.dirname(fname)
-            os.makedirs(os.path.join(dirname, sdir), exist_ok=True)
-            with builtins.open(os.path.join(dirname, fname), 'wb') as out_file:
-                for _ in copy_stream_buffered(filestream, out_file):
-                    pass
+            if Path(fname).match(pattern):
+                sdir = os.path.dirname(fname)
+                os.makedirs(os.path.join(dirname, sdir), exist_ok=True)
+                with builtins.open(os.path.join(dirname, fname), 'wb') as out_file:
+                    for _ in copy_stream_buffered(filestream, out_file):
+                        pass
 
 @contextmanager
 def open(*args, **kwargs):
@@ -125,11 +132,18 @@ if __name__ == '__main__':
         sys.exit(1)
 
     filename = sys.argv[1]
+    pattern = sys.argv[2] if len(sys.argv) > 2 else GLOB_ALL
+    print(filename, pattern)
     with open(filename) as lpak:
-        # lpak.extractall('out')
-        for fname in lpak.listdir('audio'):
-            if fname[-4:] == '.fsb':
-                base = os.path.basename(fname)
-                with lpak.open(fname, 'rb') as f:
-                    with builtins.open(base, 'wb') as o:
-                        o.write(f.read())
+
+        if pattern == GLOB_ALL:
+            assert set(lpak.iglob(pattern)) == set(fname for fname in lpak.index)
+
+        lpak.extractall('out', pattern)
+
+        # for fname in lpak.glob(pattern):
+        #     os.makedirs(os.path.dirname(fname), exist_ok=True)
+        #     # base = os.path.basename(fname)
+        #     with lpak.open(fname, 'rb') as f:
+        #         with builtins.open(fname, 'wb') as o:
+        #             o.write(f.read())
