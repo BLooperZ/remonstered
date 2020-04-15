@@ -24,6 +24,12 @@ def read_streams(sounds, index):
         stream = sounds.get(fname, None)
         if not stream:
             stream = build_missing_entry(sounds, fname)
+
+        # # DEBUG: Uncomment this block to dump audio streams.
+        # os.makedirs('VO', exist_ok=True)
+        # with open(f'VO/EN_{fname}.mp3', 'wb') as eff:
+        #     eff.write(stream)
+
         yield offset, tags, stream
 
 def resource(base_path, *paths):
