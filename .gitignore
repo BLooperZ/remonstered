@@ -108,4 +108,4 @@ venv.bak/
 
 # Output
 *.so*
-out/
+out*/
