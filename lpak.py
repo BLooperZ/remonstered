@@ -28,6 +28,9 @@ def read_uint32le(stream):
 def read_uint32le_x4(stream):
     return struct.unpack('<4I', stream.read(4 * 4))
 
+def read_float(stream):
+    return struct.unpack('<f', stream.read(4))[0]
+
 def readcstr(stream):
     pos = stream.tell()
     bound_read = iter(partial(stream.read, 1), b'')
@@ -38,6 +41,11 @@ def read_filentry(stream):
     val = stream.read(5 * 4)
     return LPAKFileEntry(*struct.unpack('<5I', val)) if val else None
 
+
+def read_filentry_v15(stream):
+    val = stream.read(8 + 4 * 4)
+    return LPAKFileEntry(*struct.unpack('<Q4I', val)) if val else None
+
 def get_partial_streams(stream, cues):
     pos = stream.tell()
     for offset, size in cues:
@@ -45,10 +53,27 @@ def get_partial_streams(stream, cues):
         yield offset, PartialStreamView(stream, size)
     stream.seek(pos, io.SEEK_SET)
 
+def get_stream_size(stream):
+    pos = stream.tell()
+    stream.seek(0, io.SEEK_END)
+    size = stream.tell()
+    stream.seek(pos, io.SEEK_SET)
+    return size
+
 def read_header(stream):
+    size = get_stream_size(stream)
     tag = stream.read(4)
     assert tag == b'LPAK'[::-1]
-    version = read_uint32le(stream)
+    version = read_float(stream)
+    if version >= 1.5:
+        assert version == 1.5, version
+        offs = list(read_uint32le_x4(stream))
+        sizes = list(read_uint32le_x4(stream))
+        sizes = sizes[1], sizes[0], sizes[2], size - offs[0]
+        cues = list(zip(offs, sizes))
+        views = list(get_partial_streams(stream, cues))
+        return tag, version, views
+    assert version == 1.0, version
     cues = list(zip(*[read_uint32le_x4(stream), read_uint32le_x4(stream)]))
     views = list(get_partial_streams(stream, cues))
     return tag, version, views
@@ -72,11 +97,25 @@ def get_findex(stream, views):
     findex = dict(build_index(ftable, names))
     return findex, data[1]
 
+def get_findex_v15(stream, views):
+    ftable, index, names, data = views
+    unknown = stream.read(8)
+    assert stream.tell() == ftable[0], (stream.tell(), ftable[0])
+    ftable = list(iter(partial(read_filentry_v15, ftable[1]), None))
+    assert stream.tell() == index[0], (stream.tell(), index[0])
+    index = list(iter(partial(read_uint32le, index[1]), None))
+    assert stream.tell() == names[0]
+    names = list(iter(partial(readcstr, names[1]), None))
+    assert stream.tell() == data[0]
+    findex = dict(build_index(ftable, names))
+    return findex, data[1]
+
 class LPakArchive:
     def __init__(self, filename, fileobj=None) -> None:
         self._stream = fileobj if fileobj else builtins.open(filename, 'rb')
         tag, version, views = read_header(self._stream)
-        self.index, self._data = get_findex(self._stream, views)
+        read_findex = get_findex if version < 1.5 else get_findex_v15
+        self.index, self._data = read_findex(self._stream, views)
 
     def __enter__(self):
         return self
