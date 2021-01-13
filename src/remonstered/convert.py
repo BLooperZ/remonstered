@@ -30,8 +30,7 @@ def convert_streams(
     with concurrent.futures.ProcessPoolExecutor() as executor:
         try:
             converted = executor.map(convert, sounds)
-            for offset, tags, sound in zip(offs, tags_info, converted):
-                yield offset, tags, sound
+            yield from zip(offs, tags_info, converted)
         except KeyboardInterrupt as kbi:
             executor.shutdown(wait=False)
             raise kbi
