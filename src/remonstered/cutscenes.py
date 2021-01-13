@@ -1,36 +1,44 @@
-import itertools
 import os
-import struct
 import subprocess
 import sys
-import zlib
-from typing import List, IO
 
 from nutcracker.compress_san import strip_compress_san
 
 from . import lpak
 from .missing import closed_tempfile_name
 
-def extract_ogv_audio(source, dest):
+
+def extract_ogv_audio(source: bytes, dest: str) -> None:
     with closed_tempfile_name(content=source, mode='w+b', suffix='.ogv') as src:
         try:
-            p = subprocess.run(
-                ['ffmpeg', '-y', '-i', src, '-vn', '-map', '0:1', '-ac', '2', '-b:a', '320k', dest],
+            _ = subprocess.run(
+                [
+                    'ffmpeg',
+                    '-y',
+                    '-i',
+                    src,
+                    '-vn',
+                    '-map',
+                    '0:1',
+                    '-ac',
+                    '2',
+                    '-b:a',
+                    '320k',
+                    dest,
+                ],
                 check=True,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
             )
         except OSError:
             print('ERROR: ffmpeg not available.')
             print('Please make sure ffmpeg binaries can be found in PATH.')
             sys.exit(1)
 
-if __name__ == '__main__':
-    import sys
-    from pathlib import Path
 
+if __name__ == '__main__':
     if not len(sys.argv) > 1:
-        print(f'ERROR: Archive filename not specified.')
+        print('ERROR: Archive filename not specified.')
         sys.exit(1)
 
     res_file = sys.argv[1]
@@ -53,7 +61,4 @@ if __name__ == '__main__':
 
                 with pak.open(videohd, 'rb') as vid:
                     stream = vid.read()
-                extract_ogv_audio(
-                    stream,
-                    os.path.join(directory, f'{simplename}.ogg')
-                )
+                extract_ogv_audio(stream, os.path.join(directory, f'{simplename}.ogg'))

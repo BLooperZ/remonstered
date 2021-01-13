@@ -3,8 +3,9 @@ import click
 output_exts = {
     'ogg': 'sog',
     'flac': 'sof',
-    'mp3': 'so3'
+    'mp3': 'so3',
 }
+
 
 class UnsupportedAudioFormatError(click.ClickException):
     def show(self):
@@ -12,8 +13,9 @@ class UnsupportedAudioFormatError(click.ClickException):
         print(f'ERROR: Unsupported audio format: {self.message}.')
         print(f'Available options are [{available}].')
 
-def get_output_extension(target_ext):
+
+def get_output_extension(target_ext: str) -> str:
     try:
         return output_exts[target_ext]
-    except KeyError as exc:
+    except KeyError:
         raise UnsupportedAudioFormatError(target_ext)

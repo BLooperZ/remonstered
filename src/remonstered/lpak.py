@@ -6,13 +6,26 @@ import operator
 from itertools import takewhile
 from functools import partial
 from contextlib import contextmanager
-from typing import NamedTuple
+from types import TracebackType
+from typing import (
+    Dict,
+    IO,
+    Iterable,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+)
 from pathlib import Path
 
-from .streamview import PartialStreamView
+from .streamview import PartialStreamView, Stream
 from .utils import copy_stream_buffered
 
 GLOB_ALL = '*'
+
 
 class LPAKFileEntry(NamedTuple):
     data_offset: int
@@ -21,46 +34,56 @@ class LPAKFileEntry(NamedTuple):
     decompressed_size: int
     is_compressed: int
 
-def read_uint32le(stream):
+
+def read_uint32le(stream: IO[bytes]) -> Optional[int]:
     val = stream.read(4)
     return struct.unpack('<I', val)[0] if val else None
 
-def read_uint32le_x4(stream):
-    return struct.unpack('<4I', stream.read(4 * 4))
 
-def read_float(stream):
+def read_uint32le_x4(stream: IO[bytes]) -> Tuple[int, int, int, int]:
+    return struct.unpack('<4I', stream.read(4 * 4))  # type: ignore
+
+
+def read_float(stream: IO[bytes]) -> float:
     return struct.unpack('<f', stream.read(4))[0]
 
-def readcstr(stream):
+
+def readcstr(stream: IO[bytes]) -> Optional[Tuple[int, str]]:
     pos = stream.tell()
     bound_read = iter(partial(stream.read, 1), b'')
     res = b''.join(takewhile(partial(operator.ne, b'\00'), bound_read))
     return (pos, res.decode()) if res else None
 
-def read_filentry(stream):
+
+def read_filentry(stream: IO[bytes]) -> Optional[LPAKFileEntry]:
     val = stream.read(5 * 4)
     return LPAKFileEntry(*struct.unpack('<5I', val)) if val else None
 
 
-def read_filentry_v15(stream):
+def read_filentry_v15(stream: IO[bytes]) -> Optional[LPAKFileEntry]:
     val = stream.read(8 + 4 * 4)
     return LPAKFileEntry(*struct.unpack('<Q4I', val)) if val else None
 
-def get_partial_streams(stream, cues):
+
+def get_partial_streams(stream: IO[bytes], cues) -> Iterator[Tuple[int, Stream]]:
     pos = stream.tell()
     for offset, size in cues:
         stream.seek(offset, io.SEEK_SET)
         yield offset, PartialStreamView(stream, size)
     stream.seek(pos, io.SEEK_SET)
 
-def get_stream_size(stream):
+
+def get_stream_size(stream: IO[bytes]) -> int:
     pos = stream.tell()
     stream.seek(0, io.SEEK_END)
     size = stream.tell()
     stream.seek(pos, io.SEEK_SET)
     return size
 
-def read_header(stream):
+
+def read_header(
+    stream: IO[bytes],
+) -> Tuple[bytes, float, List[Tuple[int, Stream]]]:
     size = get_stream_size(stream)
     tag = stream.read(4)
     assert tag == b'LPAK'[::-1]
@@ -69,105 +92,126 @@ def read_header(stream):
         assert version == 1.5, version
         offs = list(read_uint32le_x4(stream))
         sizes = list(read_uint32le_x4(stream))
-        sizes = sizes[1], sizes[0], sizes[2], size - offs[0]
-        cues = list(zip(offs, sizes))
+        resizes = sizes[1], sizes[0], sizes[2], size - offs[0]
+        cues = list(zip(offs, resizes))
         views = list(get_partial_streams(stream, cues))
         return tag, version, views
     assert version == 1.0, version
-    cues = list(zip(*[read_uint32le_x4(stream), read_uint32le_x4(stream)]))
+    cues = list(
+        zip(*[read_uint32le_x4(stream), read_uint32le_x4(stream)])  # type: ignore
+    )
     views = list(get_partial_streams(stream, cues))
     return tag, version, views
 
-def build_index(ftable, names):
+
+def build_index(ftable: Iterable[LPAKFileEntry], names: Iterable[Tuple[int, str]]):
     # ftable = sorted(ftable, key=operator.attrgetter('name_offset'))
     for (off, name), entry in zip(names, ftable):
         # assert off == entry.name_offset, (off, entry.name_offset)
         # print(off, name, len(name), entry)
         yield os.path.normpath(name), entry
 
-def get_findex(stream, views):
+
+def get_findex(
+    stream: IO[bytes],
+    views: List[Tuple[int, Stream]],
+) -> Tuple[Dict[str, LPAKFileEntry], Stream]:
     index, ftable, names, data = views
     assert stream.tell() == index[0]
-    index = list(iter(partial(read_uint32le, index[1]), None))
+    _ = list(iter(partial(read_uint32le, index[1]), None))
     assert stream.tell() == ftable[0]
-    ftable = list(iter(partial(read_filentry, ftable[1]), None))
+    rftable = list(iter(partial(read_filentry, ftable[1]), None))
     assert stream.tell() == names[0]
-    names = list(iter(partial(readcstr, names[1]), None))
+    rnames = list(iter(partial(readcstr, names[1]), None))
     assert stream.tell() == data[0]
-    findex = dict(build_index(ftable, names))
+    findex = dict(build_index(rftable, rnames))
     return findex, data[1]
 
-def get_findex_v15(stream, views):
+
+def get_findex_v15(
+    stream: IO[bytes],
+    views: List[Tuple[int, Stream]],
+) -> Tuple[Dict[str, LPAKFileEntry], Stream]:
     ftable, index, names, data = views
-    unknown = stream.read(8)
+    _ = stream.read(8)
     assert stream.tell() == ftable[0], (stream.tell(), ftable[0])
-    ftable = list(iter(partial(read_filentry_v15, ftable[1]), None))
+    rftable = list(iter(partial(read_filentry_v15, ftable[1]), None))
     assert stream.tell() == index[0], (stream.tell(), index[0])
-    index = list(iter(partial(read_uint32le, index[1]), None))
+    _ = list(iter(partial(read_uint32le, index[1]), None))
     assert stream.tell() == names[0]
-    names = list(iter(partial(readcstr, names[1]), None))
+    rnames = list(iter(partial(readcstr, names[1]), None))
     assert stream.tell() == data[0]
-    findex = dict(build_index(ftable, names))
+    findex = dict(build_index(rftable, rnames))
     return findex, data[1]
+
 
 class LPakArchive:
-    def __init__(self, filename, fileobj=None) -> None:
+    def __init__(self, filename: str, fileobj: Optional[IO[bytes]] = None) -> None:
         self._stream = fileobj if fileobj else builtins.open(filename, 'rb')
         tag, version, views = read_header(self._stream)
         read_findex = get_findex if version < 1.5 else get_findex_v15
         self.index, self._data = read_findex(self._stream, views)
 
-    def __enter__(self):
+    def __enter__(self) -> 'LPakArchive':
         return self
 
     @contextmanager
-    def open(self, fname, mode='r'):
+    def open(self, fname: str, mode: str = 'r') -> Iterator[Stream]:
         try:
             member = self.index[os.path.normpath(fname)]
         except KeyError:
             raise ValueError(f'no member {fname}')
         self._data.seek(member.data_offset)
-        restream = PartialStreamView(self._data, member.decompressed_size)
+        restream: Stream = PartialStreamView(self._data, member.decompressed_size)
 
-        if not 'b' in mode:
+        if 'b' not in mode:
+            restream = cast(IO[bytes], restream)
             restream = io.TextIOWrapper(restream, encoding='utf-8')
         yield restream
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(
+        self,
+        exctype: Optional[Type[BaseException]],
+        excinst: Optional[BaseException],
+        exctb: Optional[TracebackType],
+    ) -> Optional[bool]:
         return self._stream.close()
 
-    def iglob(self, pattern):
+    def iglob(self, pattern: str) -> Iterator[str]:
         return (fname for fname in self.index if Path(fname).match(pattern))
 
-    def listdir(self, path=''):
+    def listdir(self, path: str = '') -> List[str]:
         path = os.path.join(os.path.normpath(path), '')
         if path == './':
             return list(self.index.keys())
         return [fname for fname in self.index if fname.startswith(path)]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[str, Stream]]:
         for fname, member in self.index.items():
             self._data.seek(member.data_offset)
             yield fname, PartialStreamView(self._data, member.decompressed_size)
 
-    def extractall(self, dirname, pattern=GLOB_ALL):
+    def extractall(self, dirname: str, pattern: str = GLOB_ALL) -> None:
         for fname, filestream in self:
             if Path(fname).match(pattern):
                 sdir = os.path.dirname(fname)
                 os.makedirs(os.path.join(dirname, sdir), exist_ok=True)
                 with builtins.open(os.path.join(dirname, fname), 'wb') as out_file:
+                    filestream = cast(IO[bytes], filestream)
                     for _ in copy_stream_buffered(filestream, out_file):
                         pass
 
+
 @contextmanager
-def open(*args, **kwargs):
-    yield LPakArchive(*args, **kwargs) 
+def open(*args, **kwargs) -> Iterator[LPakArchive]:
+    yield LPakArchive(*args, **kwargs)
+
 
 if __name__ == '__main__':
     import sys
 
     if not len(sys.argv) > 1:
-        print(f'ERROR: Archive filename not specified.')
+        print('ERROR: Archive filename not specified.')
         sys.exit(1)
 
     filename = sys.argv[1]
