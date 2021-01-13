@@ -1,5 +1,0 @@
-click==7.1.2
-pydub==0.24.1
-PyInstaller==3.6
-tqdm==4.46.1
-git+https://github.com/BLooperZ/python-fsb5.git
