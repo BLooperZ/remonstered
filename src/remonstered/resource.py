@@ -6,9 +6,9 @@ from contextlib import contextmanager
 
 import click
 
-import lpak
-from soundbank import get_soundbanks_view
-from missing import build_missing_entry
+from . import lpak
+from .soundbank import get_soundbanks_view
+from .missing import build_missing_entry
 
 def read_hex(hexstr):
     return binascii.unhexlify(hexstr.encode())

@@ -6,10 +6,10 @@ import itertools
 
 import click
 
-from audio import get_output_extension, output_exts
-from convert import format_streams
-from utils import copy_stream_buffered, drive_progress, consume, iterate
-from resource import fetch_sources
+from .audio import get_output_extension, output_exts
+from .convert import format_streams
+from .utils import copy_stream_buffered, drive_progress, consume, iterate
+from .resource import fetch_sources
 
 def collect_streams(output_idx, audio_stream, streams):
     for offset, tags, stream in streams:

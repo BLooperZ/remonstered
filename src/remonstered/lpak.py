@@ -9,8 +9,8 @@ from contextlib import contextmanager
 from typing import NamedTuple
 from pathlib import Path
 
-from streamview import PartialStreamView
-from utils import copy_stream_buffered
+from .streamview import PartialStreamView
+from .utils import copy_stream_buffered
 
 GLOB_ALL = '*'
 

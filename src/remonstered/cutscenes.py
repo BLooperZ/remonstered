@@ -8,8 +8,8 @@ from typing import List, IO
 
 from nutcracker.compress_san import strip_compress_san
 
-import lpak
-from missing import closed_tempfile_name
+from . import lpak
+from .missing import closed_tempfile_name
 
 def extract_ogv_audio(source, dest):
     with closed_tempfile_name(content=source, mode='w+b', suffix='.ogv') as src:
