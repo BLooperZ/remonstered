@@ -2,11 +2,11 @@ import itertools
 
 import click
 
-from remonstered.audio import output_exts
-from remonstered.remonster import remonster
-from remonstered.extract import extract
-from remonstered.utils import drive_progress
-from remonstered import lpak
+from remonstered.core import lpak
+from remonstered.core.audio import output_exts
+from remonstered.core.extract import extract
+from remonstered.core.remonster import remonster
+from remonstered.core.utils import drive_progress
 
 
 @click.command()

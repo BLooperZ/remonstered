@@ -31,8 +31,8 @@ cutscenes = ["nutcracker"]
 repository = "https://github.com/blooperz/remonstered"
 
 [tool.poetry.scripts]
-remonster = "scripts.remonster:main"
-lpak = "remonstered.lpak:main"
+remonster = "remonstered.scripts.remonster:main"
+lpak = "remonstered.core.lpak:main"
 
 [tool.black]
 skip-string-normalization = true

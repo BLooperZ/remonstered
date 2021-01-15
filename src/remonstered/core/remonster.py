@@ -7,8 +7,7 @@ from typing import IO, Iterable, Optional, Tuple
 
 import click
 
-from remonstered import lpak
-
+from . import lpak
 from .audio import get_output_extension, output_exts
 from .convert import format_streams
 from .utils import copy_stream_buffered, drive_progress, consume, iterate
