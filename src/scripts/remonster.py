@@ -12,6 +12,7 @@ from remonstered import lpak
 
 
 def extract_files(archive: lpak.LPakArchive, files: Iterable[str], output_dir: str):
+    os.makedirs(output_dir, exist_ok=True)
     for fname in files:
         with archive.open(fname, 'rb') as src, open(
             os.path.join(output_dir, os.path.basename(fname)), 'wb'
@@ -37,7 +38,7 @@ def extract_progress(
     dirs, files = zip(*get_files_to_extract(archive, data_files))
     all_files = itertools.chain.from_iterable(files)
     action = 'Extracting data files...'
-    total_bytes = sum([archive.index[fname].decompressed_size for fname in all_files])
+    total_bytes = sum(archive.index[fname].decompressed_size for fname in all_files)
     if total_bytes > 0:
         writes = itertools.chain.from_iterable(
             extract_files(archive, dir_files, output_dir)
