@@ -14,6 +14,7 @@ pydub = "^0.24.1"
 tqdm = "^4.56.0"
 fsb5 = {git = "https://github.com/BLooperZ/python-fsb5.git"}
 nutcracker = {version = "0.3.14", optional = true}
+parse = {version = "^1.19.0", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -25,7 +26,7 @@ nitpick = "^0.23.1"
 pyinstaller = "^4.2"
 
 [tool.poetry.extras]
-cutscenes = ["nutcracker"]
+cutscenes = ["nutcracker", "parse"]
 
 [tool.poetry.urls]
 repository = "https://github.com/blooperz/remonstered"

@@ -4,6 +4,7 @@ import click
 
 from remonstered.core import lpak
 from remonstered.core.audio import output_exts
+from remonstered.core.cutscenes import convert_cutscenes
 from remonstered.core.extract import extract
 from remonstered.core.remonster import remonster
 from remonstered.core.utils import drive_progress
@@ -35,6 +36,7 @@ def main(filename, index_dir, audio_format):
         prog = itertools.chain(
             remonster(archive, index_dir, audio_format),
             extract(archive, index_dir),
+            convert_cutscenes(archive)
         )
         for action, (task, total) in prog:
             print(action)
