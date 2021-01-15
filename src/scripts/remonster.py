@@ -17,8 +17,7 @@ def extract_files(archive: lpak.LPakArchive, files: Iterable[str], output_dir: s
         with archive.open(fname, 'rb') as src, open(
             os.path.join(output_dir, os.path.basename(fname)), 'wb'
         ) as out:
-            for num_bytes in copy_stream_buffered(src, out):
-                yield num_bytes
+            yield from copy_stream_buffered(src, out)
 
 
 def get_files_to_extract(
