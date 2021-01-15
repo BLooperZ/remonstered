@@ -1,6 +1,6 @@
 pyinstaller --onefile ^
     --add-data "dott\*.tbl;." ^
     --add-data "dott\*.json;." ^
-    remonster.py
+    src/scripts/remonster.py
 mkdir dist
 copy README.dott.md dist\README.md

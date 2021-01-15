@@ -70,6 +70,13 @@ def read_audiomap(path: Optional[str]) -> Dict[str, str]:
         return json.load(audiomap)
 
 
+def read_extractmap(path: Optional[str]) -> Dict[str, str]:
+    """Read files to extract"""
+    mapfile = resource(path, 'extract.json')
+    with open(mapfile, 'r') as extractmap:
+        return json.load(extractmap)
+
+
 class FailedToLoadFileError(click.ClickException):
     def show(self):
         print(f'ERROR: Failed to load file: {self.message}.')
@@ -78,16 +85,15 @@ class FailedToLoadFileError(click.ClickException):
 
 @contextmanager
 def fetch_sources(
-    res_file: str, index_dir: Optional[str] = '.'
+    archive: lpak.LPakArchive, index_dir: Optional[str] = '.'
 ) -> Iterator[
     Tuple[str, List[Tuple[bytes, bytes, str]], Iterator[Tuple[bytes, bytes, bytes]]]
 ]:
     try:
         index = read_tables(index_dir)
         audiomap = read_audiomap(index_dir)
-        with lpak.open(res_file) as pak:
-            with get_soundbanks_view(pak, audiomap) as stream_view:
-                ext, sounds = stream_view
-                yield ext, index, read_streams(sounds, index)
+        with get_soundbanks_view(archive, audiomap) as stream_view:
+            ext, sounds = stream_view
+            yield ext, index, read_streams(sounds, index)
     except OSError as e:
         raise FailedToLoadFileError(e.filename)

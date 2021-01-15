@@ -1,0 +1,17 @@
+{
+    ".": [
+        "classic/en/ft.la*"
+    ],
+    "DATA": [
+        "DATA/*.FLU",
+        "DATA/*.NUT",
+        "DATA/*.RIP",
+        "DATA/*.SAN",
+        "EN/DATA/*.TRS",
+        "EN/DATA/*.NUT"
+    ],
+    "VIDEO": [
+        "EN/VIDEO/*.TRS",
+        "VIDEO/*.SAN"
+    ]
+}

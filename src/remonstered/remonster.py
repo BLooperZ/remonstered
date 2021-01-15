@@ -7,6 +7,8 @@ from typing import IO, Iterable, Optional, Tuple
 
 import click
 
+from remonstered import lpak
+
 from .audio import get_output_extension, output_exts
 from .convert import format_streams
 from .utils import copy_stream_buffered, drive_progress, consume, iterate
@@ -59,9 +61,11 @@ def build_monster(
 
 
 def remonster(
-    res_file: str, index_dir: Optional[str] = '.', target_ext: Optional[str] = None
+    archive: lpak.LPakArchive,
+    index_dir: Optional[str] = '.',
+    target_ext: Optional[str] = None,
 ):
-    with fetch_sources(res_file, index_dir) as source:
+    with fetch_sources(archive, index_dir) as source:
         ext, index, source_streams = source
         target_ext = target_ext or ext
         output_ext = get_output_extension(target_ext)
