@@ -26,6 +26,19 @@ def extract_ogv_audio(source: bytes, dest: str) -> None:
     with closed_tempfile_name(content=source, mode='w+b', suffix='.ogv') as src:
         try:
             _ = subprocess.run(
+                # # Direct extract of audio stream is disabled until supported
+                # [
+                #     'ffmpeg',
+                #     '-y',
+                #     '-i',
+                #     src,
+                #     '-vn',
+                #     '-map',
+                #     '0:a',
+                #     '-acodec',
+                #     'copy',
+                #     dest,
+                # ],
                 [
                     'ffmpeg',
                     '-y',
@@ -101,7 +114,7 @@ if __name__ == '__main__':
     res_file = sys.argv[1]
 
     with lpak.open(res_file) as pak:
-        prog = convert_cutscenes(pak)
+        prog = convert_cutscenes(pak, output_dir='out')
         for action, (task, total) in prog:
             print(action)
             drive_progress(task, total=total)
