@@ -563,7 +563,7 @@ cutscenes = ["nutcracker"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2801c52ec4c1945d3a9eef77b5775407e04dd0b95c6ab628435752bd83bd2f5e"
+content-hash = "83edb8100519c05ea12f7a8bddb0326db149132ae79b1eb8e9b8defc652e40d1"
 
 [metadata.files]
 altgraph = [

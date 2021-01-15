@@ -13,7 +13,7 @@ click = "^7.1.2"
 pydub = "^0.24.1"
 tqdm = "^4.56.0"
 fsb5 = {git = "https://github.com/BLooperZ/python-fsb5.git"}
-nutcracker = {version = "^0.3.14", optional = true}
+nutcracker = {version = "0.3.14", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
