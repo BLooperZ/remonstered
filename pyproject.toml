@@ -31,7 +31,7 @@ cutscenes = ["nutcracker"]
 repository = "https://github.com/blooperz/remonstered"
 
 [tool.poetry.scripts]
-remonster = "remonstered.remonster:main"
+remonster = "scripts.remonster:main"
 lpak = "remonstered.lpak:main"
 
 [tool.black]
