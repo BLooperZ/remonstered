@@ -140,6 +140,7 @@ class LPakArchive:
         tag, version, views = read_header(self._stream)
         read_findex = get_findex if version < 1.5 else get_findex_v15
         self.index, self._data = read_findex(self._stream, views)
+        self.path = filename
 
     def __enter__(self) -> 'LPakArchive':
         return self
