@@ -1,39 +1,32 @@
-# DOTT reMONSTERed
+# DOTT/FT reMONSTERed
 
-Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [DOTT Remastered](http://dott.doublefine.com/).
+Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [DOTT Remastered](http://dott.doublefine.com/) and [FT Remastered](http://fullthrottle.doublefine.com/).
 
 ## Download
 You can find a ready-to-use build in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
 (Built with PyInstaller)
 
 ## Install
-1.  Extract the following files from `tenta.cle`:
-    * `iMUSEClient_SFX.fsb`
-    * `iMUSEClient_VO.fsb` 
+1. Download and extract the script from respective release. 
+for FT, make sure[ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) is installed or alternatively, extract into script directory. this is also required for conversion feature in DOTT (see `NOTE` below).
 
-    Can be done using [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer)
+2. Drag `full.data` or `tenta.cle` and drop into `remonster.exe`.
 
-    ... You can also use it to extract the classic game, to play it using ScummVM.
+3. Game files will be created in the same directory.
 
-2.  Put the extracted file in the same directory with the script.
-
-3.  Launch the script (or double click `remonster.exe`)
-
-    This will create a file called `monster.so3` in same directory.
-
-4.  Put `monster.so3` in same directory with the classic game.
-
-    Make sure there are no other `monster` files (`sof`, `sog`, `so3` or `sou`) there.
+4. Add directory to [ScummVM](https://www.scummvm.org/) to play.
 
 ### *NOTE*:
 It is also possible to convert sounds to `ogg` or `flac` format.
 
-This can be done by providing format argument to the script: (step 3)
+This can be done by providing format argument to the script, when launching via CLI
 
-`remonster.exe ogg` -> `ogg` format, creates `monster.sog`.
+(assuming `full.data` or `tenta.cle` available at `<respath>`)
+
+`remonster.exe <respath> -f ogg` -> `ogg` format, creates `monster.sog`.
 (much smaller file than `mp3`)
 
-`remonster.exe flac` -> `flac` format, creates `monster.sof`. (no reason to use `flac` here as source files are already compressed with lossy compression).
+`remonster.exe <respath> -f flac` -> `flac` format, creates `monster.sof`. (no reason to use `flac` here as source files are already compressed with lossy compression).
 
 It will take longer time to complete, then you can continue to the next step.
 
@@ -47,9 +40,9 @@ When using convertion output may vary depending on ffmpeg version.
 
 * ScummVM Team for [ScummVM](https://www.scummvm.org/) and [ScummVM Tools](https://github.com/scummvm/scummvm-tools).
 
-* LucasArts for the original [Day of the Tentacle](https://en.wikipedia.org/wiki/Day_of_the_Tentacle).
+* LucasArts for the original [Day of the Tentacle](https://en.wikipedia.org/wiki/Day_of_the_Tentacle) and [Full Throttle](https://en.wikipedia.org/wiki/Full_Throttle_(1995_video_game)).
 
-* [DoubleFine Productions](http://www.doublefine.com) for [Day of the Tentacle Remastered](http://dott.doublefine.com/).
+* [DoubleFine Productions](http://www.doublefine.com) for [Day of the Tentacle Remastered](http://dott.doublefine.com/) and [Full Throttle Remastered](http://fullthrottle.doublefine.com/).
 
 * Quick and Easy Software for [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer).
 

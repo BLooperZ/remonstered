@@ -1,49 +1,38 @@
-# FT reMONSTERed (WiP)
+# FT reMONSTERed
 
 Builds sound resource for [ScummVM](https://www.scummvm.org/) using High-Quality SFX and Speech from [FT Remastered](http://fullthrottle.doublefine.com/).
 
-*NOTE*: This project is still Work-in-Progress.
-Currently, only speech is supported and might change in future.
-
 ## Download
-Ready-to-use build not available yet.
-
-In the meantime, check out other projects in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
+You can find a ready-to-use build in the [Releases page](https://github.com/BLooperZ/remonstered/releases).
 (Built with PyInstaller)
 
 ## Install
-1.  Put [ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) in script directory if not already installed.
+1. Download and extract the script from respective release. 
+make sure[ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) is installed or alternatively, extract into script directory.
 
-2.  Extract the following files from `full.data`:
-    * `iMUSEClient_SPEECH.fsb`
+2. Drag `full.data` and drop into `remonster.exe`.
 
-    Can be done using [DoubleFine Explorer](https://quickandeasysoftware.net/software/doublefine-explorer)
+3. Game files will be created in the same directory.
 
-    ... You can also use it to extract the classic game, to play it using ScummVM.
-
-3.  Put the extracted file in the same directory with the script.
-
-4.  Launch the script (or double click `remonster.exe`)
-
-    This will create a file called `monster.so3` in same directory.
-
-5.  Put `monster.so3` in same directory with the classic game.
-
-    Make sure there are no other `monster` files (`sof`, `sog`, `so3` or `sou`) there.
+4. Add directory to [ScummVM](https://www.scummvm.org/) to play.
 
 ### *NOTE*:
 It is also possible to convert sounds to `ogg` or `flac` format.
 
-This can be done by providing format argument to the script: (step 3)
+This can be done by providing format argument to the script, when launching via CLI
 
-`remonster.exe ogg` -> `ogg` format, creates `monster.sog`.
+(assuming `full.data` available at `<respath>`)
+
+`remonster.exe <respath> -f ogg` -> `ogg` format, creates `monster.sog`.
 (much smaller file than `mp3`)
 
-`remonster.exe flac` -> `flac` format, creates `monster.sof`. (no reason to use `flac` here as source files are already compressed with lossy compression).
+`remonster.exe <respath> -f flac` -> `flac` format, creates `monster.sof`. (no reason to use `flac` here as source files are already compressed with lossy compression).
 
 It will take longer time to complete, then you can continue to the next step.
 
 Notice the different output file name (as described above).
+
+This feature requires [ffmpeg binaries](https://ffmpeg.zeranoe.com/builds/) to be installed or to be put in script directory.
 
 When using convertion output may vary depending on ffmpeg version.
 
