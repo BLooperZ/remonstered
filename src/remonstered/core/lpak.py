@@ -24,7 +24,7 @@ from .utils import copy_stream_buffered
 
 GLOB_ALL = '*'
 
-UINT32LE = Struct('>I')
+UINT32LE = Struct('<I')
 UINT32LE_X4 = Struct('<4I')
 FLOAT32LE = Struct('<f')
 

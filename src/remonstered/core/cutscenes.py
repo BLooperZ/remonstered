@@ -1,14 +1,20 @@
+import io
 import itertools
 import os
 import subprocess
 import sys
+from struct import Struct
 from contextlib import contextmanager
 from typing import Iterable
 
 from nutcracker.compress_san import strip_compress_san
+from nutcracker.smush.preset import smush
 
 from . import lpak
 from .missing import closed_tempfile_name
+
+
+UINT32LE = Struct('<I')
 
 
 @contextmanager
@@ -63,6 +69,16 @@ def extract_ogv_audio(source: bytes, dest: str) -> None:
             sys.exit(1)
 
 
+def get_smush_offsets(res):
+    with io.BytesIO(res) as stream:
+        anim = smush.assert_tag('ANIM', smush.untag(stream))
+        assert stream.read() == b''
+
+    _, *frames = smush.read_chunks(anim)
+    for (offset, _) in frames:
+        yield offset + 8
+
+
 def compress_and_convert_cutscenes(
     pak: lpak.LPakArchive, files: Iterable[str] = (), output_dir: str = '.'
 ):
@@ -82,6 +98,30 @@ def compress_and_convert_cutscenes(
             os.makedirs(directory, exist_ok=True)
             with open(os.path.join(directory, basename), 'wb') as out:
                 out.write(data)
+
+            flubase = f'{simplename}.flu'
+            flufile = next(
+                pak.iglob(os.path.join(os.path.dirname(fname), flubase)),
+                None,
+            )
+            if flufile:
+                with pak.open(flufile, 'rb') as res:
+                    flu = res.read(0x324)
+                    flurest = res.read()
+
+                with pak.open(fname, 'rb') as res:
+                    raw_content = res.read()
+                assert flurest == b''.join(
+                    UINT32LE.pack(offset) for offset in get_smush_offsets(raw_content)
+                )
+
+                with open(os.path.join(directory, flubase), 'wb') as out:
+                    out.write(flu)
+                    out.write(
+                        b''.join(
+                            UINT32LE.pack(offset) for offset in get_smush_offsets(data)
+                        )
+                    )
 
             # extract audio stream from HD video
             with pak.open(videohd, 'rb') as vid:

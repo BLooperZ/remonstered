@@ -3,7 +3,6 @@
         "classic/en/ft.la*"
     ],
     "DATA": [
-        "DATA/*.FLU",
         "DATA/*.NUT",
         "DATA/*.RIP",
         "DATA/*.SAN",
