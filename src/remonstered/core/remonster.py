@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 import io
 import tempfile
-import struct
 import itertools
+from struct import Struct
 from typing import IO, Iterable, Optional, Tuple
 
-import click
-
 from . import lpak
-from .audio import get_output_extension, output_exts
+from .audio import get_output_extension
 from .convert import format_streams
-from .utils import copy_stream_buffered, drive_progress, consume, iterate
+from .utils import copy_stream_buffered, consume, iterate
 from .resource import fetch_sources
+
+UINT32BE = Struct('>I')
 
 
 def collect_streams(
@@ -21,18 +21,18 @@ def collect_streams(
 ):
     for offset, tags, stream in streams:
         output_idx.write(offset)
-        output_idx.write(struct.pack('>I', audio_stream.tell()))
-        output_idx.write(struct.pack('>I', len(tags)))
+        output_idx.write(UINT32BE.pack(audio_stream.tell()))
+        output_idx.write(UINT32BE.pack(len(tags)))
 
         audio_stream.write(tags)
         audio_stream.write(stream)
-        output_idx.write(struct.pack('>I', len(stream)))
+        output_idx.write(UINT32BE.pack(len(stream)))
 
         yield offset, tags, stream
 
 
 def finalize_output(output: IO[bytes], index: IO[bytes], stream: IO[bytes]):
-    output.write(struct.pack('>I', index.tell()))
+    output.write(UINT32BE.pack(index.tell()))
     index.seek(0, io.SEEK_SET)
     stream.seek(0, io.SEEK_SET)
 
@@ -70,40 +70,3 @@ def remonster(
         output_ext = get_output_extension(target_ext)
         streams = format_streams(source_streams, ext, target_ext)
         yield from build_monster(streams, f'monster.{output_ext}', len(index))
-
-
-@click.command()
-@click.argument('filename', metavar='<filename>', required=False, default='./tenta.cle')
-@click.option(
-    '--format',
-    '-f',
-    'audio_format',
-    type=str,
-    metavar=f"[{'|'.join(output_exts)}]",
-    default=None,
-    help='Output audio format',
-)
-@click.option(
-    '--index',
-    '-i',
-    'index_dir',
-    type=click.Path(),
-    metavar='<path>',
-    default=None,
-    help='Path to directory with .tbl files',
-)
-@click.help_option('-h', '--help')
-def main(filename, index_dir, audio_format):
-    prog = remonster(filename, index_dir, audio_format)
-    for action, (task, total) in prog:
-        print(action)
-        drive_progress(task, total=total)
-    print('Done!')
-
-
-if __name__ == '__main__':
-    import multiprocessing as mp
-
-    mp.freeze_support()
-
-    main()

@@ -1,13 +1,11 @@
 import builtins
 import io
 import os
-import struct
-import operator
-from itertools import takewhile
-from functools import partial
+from struct import Struct
 from contextlib import contextmanager
 from types import TracebackType
 from typing import (
+    Any,
     Dict,
     IO,
     Iterable,
@@ -26,6 +24,13 @@ from .utils import copy_stream_buffered
 
 GLOB_ALL = '*'
 
+UINT32LE = Struct('>I')
+UINT32LE_X4 = Struct('<4I')
+FLOAT32LE = Struct('<f')
+
+FILE_ENTRY_1_0 = Struct('<5I')
+FILE_ENTRY_1_5 = Struct('<Q4I')
+
 
 class LPAKFileEntry(NamedTuple):
     data_offset: int
@@ -35,41 +40,23 @@ class LPAKFileEntry(NamedTuple):
     is_compressed: int
 
 
-def read_uint32le(stream: IO[bytes]) -> Optional[int]:
-    val = stream.read(4)
-    return struct.unpack('<I', val)[0] if val else None
-
-
 def read_uint32le_x4(stream: IO[bytes]) -> Tuple[int, int, int, int]:
-    return struct.unpack('<4I', stream.read(4 * 4))  # type: ignore
+    return UINT32LE_X4.unpack(stream.read(UINT32LE_X4.size))  # type: ignore
 
 
 def read_float(stream: IO[bytes]) -> float:
-    return struct.unpack('<f', stream.read(4))[0]
+    return FLOAT32LE.unpack(stream.read(FLOAT32LE.size))[0]
 
 
-def readcstr(stream: IO[bytes]) -> Optional[Tuple[int, str]]:
-    pos = stream.tell()
-    bound_read = iter(partial(stream.read, 1), b'')
-    res = b''.join(takewhile(partial(operator.ne, b'\00'), bound_read))
-    return (pos, res.decode()) if res else None
+def read_iter(structure: Struct, stream: IO[bytes]) -> Iterator[Tuple[Any, ...]]:
+    return structure.iter_unpack(stream.read())
 
 
-def read_filentry(stream: IO[bytes]) -> Optional[LPAKFileEntry]:
-    val = stream.read(5 * 4)
-    return LPAKFileEntry(*struct.unpack('<5I', val)) if val else None
-
-
-def read_filentry_v15(stream: IO[bytes]) -> Optional[LPAKFileEntry]:
-    val = stream.read(8 + 4 * 4)
-    return LPAKFileEntry(*struct.unpack('<Q4I', val)) if val else None
-
-
-def get_partial_streams(stream: IO[bytes], cues) -> Iterator[Tuple[int, Stream]]:
+def get_partial_streams(stream: IO[bytes], cues) -> Iterator[Tuple[int, IO[bytes]]]:
     pos = stream.tell()
     for offset, size in cues:
         stream.seek(offset, io.SEEK_SET)
-        yield offset, PartialStreamView(stream, size)
+        yield offset, cast(IO[bytes], PartialStreamView(stream, size))
     stream.seek(pos, io.SEEK_SET)
 
 
@@ -83,7 +70,7 @@ def get_stream_size(stream: IO[bytes]) -> int:
 
 def read_header(
     stream: IO[bytes],
-) -> Tuple[bytes, float, List[Tuple[int, Stream]]]:
+) -> Tuple[bytes, float, List[Tuple[int, IO[bytes]]]]:
     size = get_stream_size(stream)
     tag = stream.read(4)
     assert tag == b'LPAK'[::-1]
@@ -104,25 +91,27 @@ def read_header(
     return tag, version, views
 
 
-def build_index(ftable: Iterable[LPAKFileEntry], names: Iterable[Tuple[int, str]]):
+def build_index(ftable: Iterable[LPAKFileEntry], names: Iterable[str]):
     # ftable = sorted(ftable, key=operator.attrgetter('name_offset'))
-    for (off, name), entry in zip(names, ftable):
+    # off = 0
+    for name, entry in zip(names, ftable):
         # assert off == entry.name_offset, (off, entry.name_offset)
         # print(off, name, len(name), entry)
         yield os.path.normpath(name), entry
+        # off += len(name)
 
 
 def get_findex(
     stream: IO[bytes],
-    views: List[Tuple[int, Stream]],
-) -> Tuple[Dict[str, LPAKFileEntry], Stream]:
+    views: List[Tuple[int, IO[bytes]]],
+) -> Tuple[Dict[str, LPAKFileEntry], IO[bytes]]:
     index, ftable, names, data = views
     assert stream.tell() == index[0]
-    _ = list(iter(partial(read_uint32le, index[1]), None))
+    _ = [val[0] for val in read_iter(UINT32LE, index[1])]
     assert stream.tell() == ftable[0]
-    rftable = list(iter(partial(read_filentry, ftable[1]), None))
+    rftable = [LPAKFileEntry(*val) for val in read_iter(FILE_ENTRY_1_0, ftable[1])]
     assert stream.tell() == names[0]
-    rnames = list(iter(partial(readcstr, names[1]), None))
+    rnames = [name.decode() for name in names[1].read().split(b'\0')]
     assert stream.tell() == data[0]
     findex = dict(build_index(rftable, rnames))
     return findex, data[1]
@@ -130,16 +119,16 @@ def get_findex(
 
 def get_findex_v15(
     stream: IO[bytes],
-    views: List[Tuple[int, Stream]],
-) -> Tuple[Dict[str, LPAKFileEntry], Stream]:
+    views: List[Tuple[int, IO[bytes]]],
+) -> Tuple[Dict[str, LPAKFileEntry], IO[bytes]]:
     ftable, index, names, data = views
     _ = stream.read(8)
     assert stream.tell() == ftable[0], (stream.tell(), ftable[0])
-    rftable = list(iter(partial(read_filentry_v15, ftable[1]), None))
+    rftable = [LPAKFileEntry(*val) for val in read_iter(FILE_ENTRY_1_5, ftable[1])]
     assert stream.tell() == index[0], (stream.tell(), index[0])
-    _ = list(iter(partial(read_uint32le, index[1]), None))
+    _ = [val[0] for val in read_iter(UINT32LE, index[1])]
     assert stream.tell() == names[0]
-    rnames = list(iter(partial(readcstr, names[1]), None))
+    rnames = [name.decode() for name in names[1].read().split(b'\0')]
     assert stream.tell() == data[0]
     findex = dict(build_index(rftable, rnames))
     return findex, data[1]
