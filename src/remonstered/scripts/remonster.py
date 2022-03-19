@@ -4,10 +4,11 @@ import click
 
 from remonstered.core import lpak
 from remonstered.core.audio import output_exts
-from remonstered.core.cutscenes import convert_cutscenes
+# from remonstered.core.cutscenes import convert_cutscenes
 from remonstered.core.extract import extract
 from remonstered.core.remonster import remonster
 from remonstered.core.utils import drive_progress
+from remonstered.core.localize import drive_translate_game_resource
 
 
 @click.command()
@@ -36,7 +37,8 @@ def main(filename, index_dir, audio_format):
         prog = itertools.chain(
             remonster(archive, index_dir, audio_format),
             extract(archive, index_dir),
-            convert_cutscenes(archive)
+            # convert_cutscenes(archive),
+            drive_translate_game_resource('tentacle.000', archive, 'IT'),
         )
         for action, (task, total) in prog:
             print(action)
