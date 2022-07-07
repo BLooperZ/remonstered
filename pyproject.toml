@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "remonstered"
-version = "1.12.0"
+version = "1.12.1"
 description = "Builds sound resource for ScummVM using High-Quality SFX and Speech from remastered versions."
 authors = ["BLooperZ <blooperz@users.noreply.github.com>"]
 license = "LGPL-3.0-or-later"
@@ -8,7 +8,7 @@ readme = "README.md"
 keywords = ["dott", "ft", "remastered", "scumm"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.11"
 click = "^7.1.2"
 pydub = "^0.24.1"
 tqdm = "^4.56.0"
@@ -23,7 +23,7 @@ mypy = "^0.790"
 flake8 = "^3.8.4"
 black = "^20.8b1"
 nitpick = "^0.23.1"
-pyinstaller = "4.1"
+pyinstaller = "^5.1"
 
 [tool.poetry.extras]
 cutscenes = ["nutcracker", "parse"]
