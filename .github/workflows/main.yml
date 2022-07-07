@@ -17,6 +17,8 @@ jobs:
       matrix:
         os: 
         - windows-latest
+        - ubuntu-latest
+        - macos-latest
         game:
         - ft
         - dott
@@ -31,7 +33,12 @@ jobs:
 
     - run: |
         poetry install -E cutscenes
-        poetry run build.${{ matrix.game }}.bat
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          poetry run build.${{ matrix.game }}.bat
+        else
+          poetry run bash ./build.${{ matrix.game }}.sh
+        fi
+      shell: bash
     # Optionally verify that it works (provided that it does not need user interaction)
     - run: ./dist/remonster --help
     - run: cp LICENSE ./dist/LICENSE
