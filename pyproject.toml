@@ -3,9 +3,20 @@ name = "remonstered"
 version = "1.12.1"
 description = "Builds sound resource for ScummVM using High-Quality SFX and Speech from remastered versions."
 authors = ["BLooperZ <blooperz@users.noreply.github.com>"]
-license = "LGPL-3.0-or-later"
+license = "GPL-3.0-or-later"
 readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Topic :: Games/Entertainment",
+    "Topic :: Utilities",
+]
 keywords = ["dott", "ft", "remastered", "scumm"]
+repository = "https://github.com/blooperz/remonstered"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
@@ -28,12 +39,12 @@ pyinstaller = "^5.1"
 [tool.poetry.extras]
 cutscenes = ["nutcracker", "parse"]
 
-[tool.poetry.urls]
-repository = "https://github.com/blooperz/remonstered"
-
 [tool.poetry.scripts]
 remonster = "remonstered.scripts.remonster:main"
 lpak = "remonstered.core.lpak:main"
+
+[tool.poetry.group.dev.dependencies]
+pip-licenses = "^3.5.4"
 
 [tool.black]
 skip-string-normalization = true

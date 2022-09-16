@@ -32,7 +32,10 @@ jobs:
       uses: snok/install-poetry@v1
 
     - run: |
-        poetry install -E cutscenes
+        poetry install -E cutscenes --no-root
+        poetry build
+        poetry run pip install --no-index --find-links=dist remonstered
+        mv dist dist_old
         if [ "$RUNNER_OS" == "Windows" ]; then
           poetry run build.${{ matrix.game }}.bat
         else
@@ -41,8 +44,7 @@ jobs:
       shell: bash
     # Optionally verify that it works (provided that it does not need user interaction)
     - run: ./dist/remonster --help
-    - run: cp LICENSE ./dist/LICENSE
-      shell: bash
+    - run: poetry run pip-licenses --from=all --format=plain-vertical --with-license-file --no-license-path --with-urls --with-description --output-file ./dist/LICENSE
 
     - id: string
       uses: ASzc/change-string-case-action@v2
