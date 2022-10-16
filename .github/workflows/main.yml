@@ -22,6 +22,9 @@ jobs:
         game:
         - ft
         - dott
+    defaults:
+      run:
+        shell: bash
 
     steps:
     - uses: actions/checkout@v2
@@ -41,7 +44,6 @@ jobs:
         else
           poetry run bash ./build.${{ matrix.game }}.sh
         fi
-      shell: bash
     # Optionally verify that it works (provided that it does not need user interaction)
     - run: ./dist/remonster --help
     - run: poetry run pip-licenses --from=all --format=plain-vertical --with-license-file --no-license-path --with-urls --with-description --output-file ./dist/LICENSE
