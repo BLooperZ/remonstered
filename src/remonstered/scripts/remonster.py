@@ -31,7 +31,7 @@ from remonstered.core.utils import drive_progress
     help='Path to directory with .tbl files',
 )
 @click.help_option('-h', '--help')
-def main(filename, index_dir, audio_format):
+def main(filename: str, index_dir: str, audio_format: str) -> None:
     with lpak.open(filename) as archive:
         prog = itertools.chain(
             remonster(archive, index_dir, audio_format),
@@ -39,9 +39,9 @@ def main(filename, index_dir, audio_format):
             convert_cutscenes(archive)
         )
         for action, (task, total) in prog:
-            print(action)
+            click.echo(action)
             drive_progress(task, total=total)
-    print('Done!')
+    click.echo('Done!')
 
 
 if __name__ == '__main__':

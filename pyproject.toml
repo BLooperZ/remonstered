@@ -26,6 +26,8 @@ tqdm = "^4.66.5"
 parse = {version = "^1.20.2", optional = true}
 fsb5 = {git = "https://github.com/BLooperZ/python-fsb5.git"}
 nutcracker = {git = "https://github.com/blooperz/nutcracker.git", rev = "ed1bd8fea0e3467b6a959be050da971ad755ae65"}
+pakal = {git = "https://github.com/adventurebrew/pakal.git"}
+numpy = "^2.1.1"
 
 [tool.poetry.extras]
 cutscenes = ["nutcracker", "parse"]
@@ -40,6 +42,7 @@ pytest = "^8.3.2"
 ruff = "^0.5.6"
 pyinstaller = "^6.9.0"
 mypy = "^1.11.1"
+types-tqdm = "^4.66.0.20240417"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

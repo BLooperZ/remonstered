@@ -1,6 +1,7 @@
-import io
 import functools
-from typing import Any, Callable, IO, Iterator
+import io
+from collections.abc import Callable, Iterator
+from typing import IO, Any
 
 from tqdm import tqdm
 
@@ -23,12 +24,16 @@ def consume(it: Iterator[Any], *args: Any, **kwargs: Any) -> None:
 
 
 def buffered(
-    source: Callable[[int], bytes], buffer_size: int = io.DEFAULT_BUFFER_SIZE
+    source: Callable[[int], bytes],
+    buffer_size: int = io.DEFAULT_BUFFER_SIZE,
 ) -> Iterator[bytes]:
     return iter(functools.partial(source, buffer_size), b'')
 
 
-def copy_stream_buffered(in_stream: IO[bytes], out_stream: IO[bytes]) -> Iterator[int]:
+def copy_stream_buffered(
+    in_stream: IO[bytes],
+    out_stream: IO[bytes],
+) -> Iterator[int]:
     for buffer in buffered(in_stream.read):
         out_stream.write(buffer)
         yield len(buffer)

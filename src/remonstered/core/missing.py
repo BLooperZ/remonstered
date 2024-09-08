@@ -1,48 +1,23 @@
-import os
-import sys
-import subprocess
-import tempfile
-from contextlib import contextmanager
+from collections.abc import Mapping
 from functools import partial
-from typing import AnyStr, Iterator, Mapping, Optional
+
+from remonstered.core.ffmpeg import closed_tempfile_name, ffmpeg_run
 
 
-@contextmanager
-def closed_tempfile_name(
-    content: Optional[AnyStr] = None, *args, **kwargs
-) -> Iterator[str]:
-    with tempfile.NamedTemporaryFile(  # type: ignore
-        *args, **kwargs, delete=False
-    ) as tmp:
-        try:
-            if content:
-                tmp.write(content)
-            tmp.close()
-            yield tmp.name
-        finally:
-            os.unlink(tmp.name)
-
-
-def cut_audio_without_re_encoding(source: bytes, start: str, end: str):
+def cut_audio_without_re_encoding(source: bytes, start: str, end: str) -> bytes:
     with closed_tempfile_name(
         content=source, mode='w+b', suffix='.mp3'
     ) as src, closed_tempfile_name(mode='w+b', suffix='.mp3') as dst:
-        try:
-            _ = subprocess.run(
-                ['ffmpeg', '-y', '-i', src, '-ss', start, '-t', end, '-c', 'copy', dst],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            with open(dst, 'rb') as f:
-                return f.read()
-        except OSError:
-            print('ERROR: ffmpeg not available.')
-            print('Please make sure ffmpeg binaries can be found in PATH.')
-            sys.exit(1)
+        ffmpeg_run(src, dst, ['-ss', start, '-t', end, '-c', 'copy'])
+        return dst.read_bytes()
 
 
-def cut_stream(source: str, start: str, end: str, container: Mapping[str, bytes]):
+def cut_stream(
+    source: str,
+    start: str,
+    end: str,
+    container: Mapping[str, bytes],
+) -> bytes:
     return cut_audio_without_re_encoding(container[source], start, end)
 
 

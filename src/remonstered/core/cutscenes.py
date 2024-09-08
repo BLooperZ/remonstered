@@ -3,7 +3,6 @@ import functools
 import itertools
 import os
 import pathlib
-import subprocess
 import sys
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -12,8 +11,8 @@ from struct import Struct
 from nutcracker.smush import anim
 from nutcracker.smush.compress import strip_compress_san
 
-from . import lpak
-from .missing import closed_tempfile_name
+from remonstered.core import lpak
+from remonstered.core.ffmpeg import closed_tempfile_name, ffmpeg_run
 
 UINT32LE = Struct('<I')
 G_PAK = None
@@ -21,7 +20,7 @@ G_PAK = None
 
 @contextmanager
 def suppress_stdout() -> Iterator[None]:
-    with open(os.devnull, 'w') as devnull:
+    with pathlib.Path(os.devnull).open('w') as devnull:
         old_stdout = sys.stdout
         sys.stdout = devnull
         try:
@@ -32,43 +31,14 @@ def suppress_stdout() -> Iterator[None]:
 
 def extract_ogv_audio(source: bytes, dest: str) -> None:
     with closed_tempfile_name(content=source, mode='w+b', suffix='.ogv') as src:
-        try:
-            _ = subprocess.run(
-                # # Direct extract of audio stream is disabled until supported
-                # [
-                #     'ffmpeg',
-                #     '-y',
-                #     '-i',
-                #     src,
-                #     '-vn',
-                #     '-map',
-                #     '0:a',
-                #     '-acodec',
-                #     'copy',
-                #     dest,
-                # ],
-                [
-                    'ffmpeg',
-                    '-y',
-                    '-i',
-                    src,
-                    '-vn',
-                    '-map',
-                    '0:1',
-                    '-ac',
-                    '2',
-                    '-b:a',
-                    '320k',
-                    dest,
-                ],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except OSError:
-            print('ERROR: ffmpeg not available.')
-            print('Please make sure ffmpeg binaries can be found in PATH.')
-            sys.exit(1)
+        ffmpeg_run(
+            src,
+            dest,
+            # # Direct extract of audio stream is disabled until supported
+            # ['-vn', '-map', '0:a', '-acodec', 'copy'],  # noqa: ERA001
+            # Downmix to stereo
+            ['-vn', '-map', '0:1', '-ac', '2', '-b:a', '320k'],
+        )
 
 
 def get_smush_offsets(res: bytes) -> Iterator[int]:
@@ -79,11 +49,10 @@ def get_smush_offsets(res: bytes) -> Iterator[int]:
 
 def get_base_size(pak: lpak.LPakArchive, fname: str) -> int:
     no_file = lpak.LPAKFileEntry(0, 0, 0, 0, 0)
-    basename = os.path.basename(fname)
-    simplename, ext = os.path.splitext(basename)
-    videohd = os.path.join('videohd', f'{simplename}.ogv')
-    flubase = f'{simplename}.flu'
-    flufile = os.path.join(os.path.dirname(fname), flubase)
+    path = pathlib.Path(fname)
+    videohd = str(pathlib.Path('videohd', f'{path.stem}.ogv'))
+    flubase = f'{path.stem}.flu'
+    flufile = str(path.parent / flubase)
     return (
         pak.index[fname].decompressed_size
         + pak.index.get(videohd, no_file).decompressed_size
@@ -101,11 +70,15 @@ def compress_single(
     simplename = fname.stem
     output_dir = pathlib.Path(output_dir)
 
-    videohd = next(pak.iglob(os.path.join('videohd', f'{simplename}.ogv')), None)
+    videohd_path = str(pathlib.Path('videohd', f'{fname.stem}.ogv'))
+
+    entry = next(pak.glob(str(fname)))
+    videohd = next(pak.glob(str(videohd_path)), None)
     if videohd:
+        raw_content = entry.read_bytes()
         # override SAN file with compressed version
-        with pak.open(str(fname), 'rb') as res, suppress_stdout():
-            cont = anim.from_bytes(memoryview(res.read()))
+        with suppress_stdout():
+            cont = anim.from_bytes(memoryview(raw_content))
             data = strip_compress_san(cont)
 
         directory = output_dir / fname.parent.name
@@ -114,16 +87,13 @@ def compress_single(
 
         flubase = f'{simplename}.flu'
         flufile = next(
-            pak.iglob(str(fname.parent / flubase)),
+            pak.glob(str(fname.parent / flubase)),
             None,
         )
         if flufile:
-            with pak.open(flufile, 'rb') as res:
-                flu = res.read(0x324)
-                flurest = res.read()
+            flu = flufile.read_bytes()
+            flu, flurest = flu[:0x324], flu[0x324:]
 
-            with pak.open(str(fname), 'rb') as res:
-                raw_content = res.read()
             assert flurest == b''.join(
                 UINT32LE.pack(offset) for offset in get_smush_offsets(raw_content)
             )
@@ -134,9 +104,7 @@ def compress_single(
             )
 
         # extract audio stream from HD video
-        with pak.open(videohd, 'rb') as vid:
-            stream = vid.read()
-        extract_ogv_audio(stream, str(directory / f'{simplename}.ogg'))
+        extract_ogv_audio(videohd.read_bytes(), str(directory / f'{simplename}.ogg'))
     return get_base_size(pak, str(fname))
 
 
@@ -156,7 +124,7 @@ def compress_and_convert_cutscenes(
 ) -> Iterator[int]:
     worker = functools.partial(convert_worker, output_dir=output_dir)
     with concurrent.futures.ProcessPoolExecutor(
-        initializer=init_worker, initargs=(pak.path,)
+        initializer=init_worker, initargs=(pak._filename,) # type: ignore[arg-type] # noqa: SLF001
     ) as executor:
         try:
             results = executor.map(worker, files)
@@ -167,13 +135,15 @@ def compress_and_convert_cutscenes(
 
 
 def convert_cutscenes(
-    pak: lpak.LPakArchive,
-    output_dir: str = '.'
+    pak: lpak.LPakArchive, output_dir: str = '.'
 ) -> Iterator[tuple[str, tuple[Iterator[int], int]]]:
     patterns = {'video/*.san', 'data/*.san'}
-    files = set(
-        itertools.chain.from_iterable(pak.iglob(pattern) for pattern in patterns)
-    )
+    files = {
+        str(entry)
+        for entry in itertools.chain.from_iterable(
+            pak.glob(pattern) for pattern in patterns
+        )
+    }
     if len(files) > 0:
         action = 'Converting cutscenes...'
         total_size = sum(get_base_size(pak, fname) for fname in files)

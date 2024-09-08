@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import os
 import binascii
+import os
 
 
 def read_uint32_be(stream):

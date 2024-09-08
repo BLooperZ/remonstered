@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 import io
-import tempfile
 import itertools
+import tempfile
+from collections.abc import Iterable, Iterator
 from struct import Struct
-from typing import IO, Iterable, Optional, Tuple
+from typing import IO
 
 from . import lpak
 from .audio import get_output_extension
 from .convert import format_streams
-from .utils import copy_stream_buffered, consume, iterate
 from .resource import fetch_sources
+from .utils import consume, copy_stream_buffered, iterate
 
 UINT32BE = Struct('>I')
 
@@ -17,8 +18,8 @@ UINT32BE = Struct('>I')
 def collect_streams(
     output_idx: IO[bytes],
     audio_stream: IO[bytes],
-    streams: Iterable[Tuple[bytes, bytes, bytes]],
-):
+    streams: Iterable[tuple[bytes, bytes, bytes]],
+) -> Iterator[tuple[bytes, bytes, bytes]]:
     for offset, tags, stream in streams:
         output_idx.write(offset)
         output_idx.write(UINT32BE.pack(audio_stream.tell()))
@@ -31,19 +32,26 @@ def collect_streams(
         yield offset, tags, stream
 
 
-def finalize_output(output: IO[bytes], index: IO[bytes], stream: IO[bytes]):
+def finalize_output(
+    output: IO[bytes],
+    index: IO[bytes],
+    stream: IO[bytes],
+) -> Iterator[int]:
     output.write(UINT32BE.pack(index.tell()))
     index.seek(0, io.SEEK_SET)
     stream.seek(0, io.SEEK_SET)
 
     return itertools.chain(
-        copy_stream_buffered(index, output), copy_stream_buffered(stream, output)
+        copy_stream_buffered(index, output),
+        copy_stream_buffered(stream, output),
     )
 
 
 def build_monster(
-    streams: Iterable[Tuple[bytes, bytes, bytes]], output_file: str, index_size: int
-):
+    streams: Iterable[tuple[bytes, bytes, bytes]],
+    output_file: str,
+    index_size: int,
+) -> Iterator[tuple[str, tuple[Iterator[int], int]]]:
     with io.BytesIO() as output_idx, tempfile.TemporaryFile() as audio_stream:
 
         action = 'Collecting audio streams...'
@@ -61,9 +69,9 @@ def build_monster(
 
 def remonster(
     archive: lpak.LPakArchive,
-    index_dir: Optional[str] = '.',
-    target_ext: Optional[str] = None,
-):
+    index_dir: str | None = '.',
+    target_ext: str | None = None,
+) -> Iterator[tuple[str, tuple[Iterator[int], int]]]:
     with fetch_sources(archive, index_dir) as source:
         ext, index, source_streams = source
         target_ext = target_ext or ext
